@@ -1,0 +1,3 @@
+# ninja log v5
+1	95	1693035085165814671	ins_print@sha/ins_print.c.o	c4035cecff4fabe5
+96	120	1693035085192817224	libins_print.so	2ec1ab77a2f3ddb4
