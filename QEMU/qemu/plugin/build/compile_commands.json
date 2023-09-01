@@ -1,0 +1,14 @@
+[
+  {
+    "directory": "/work/stu/wtxiao/WorkSpace/QEMU/dockerimages/qemu/plugin/build",
+    "command": "cc -Iins_print@sha -I. -I.. -I../../include/qemu -I../../include -I../../include/exec -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -fdiagnostics-color=always -pipe -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -g -fPIC -MD -MQ 'ins_print@sha/ins_print.c.o' -MF 'ins_print@sha/ins_print.c.o.d' -o 'ins_print@sha/ins_print.c.o' -c ../ins_print.c",
+    "file": "../ins_print.c",
+    "output": "ins_print@sha/ins_print.c.o"
+  },
+  {
+    "directory": "/work/stu/wtxiao/WorkSpace/QEMU/dockerimages/qemu/plugin/build",
+    "command": "cc -Iexeclog@sha -I. -I.. -I../../include/qemu -I../../include -I../../include/exec -I/usr/include/glib-2.0 -I/usr/lib/x86_64-linux-gnu/glib-2.0/include -fdiagnostics-color=always -pipe -D_FILE_OFFSET_BITS=64 -Wall -Winvalid-pch -g -fPIC -MD -MQ 'execlog@sha/execlog.c.o' -MF 'execlog@sha/execlog.c.o.d' -o 'execlog@sha/execlog.c.o' -c ../execlog.c",
+    "file": "../execlog.c",
+    "output": "execlog@sha/execlog.c.o"
+  }
+]
