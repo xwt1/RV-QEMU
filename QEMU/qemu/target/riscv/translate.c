@@ -33,7 +33,10 @@
 #include "instmap.h"
 #include "internals.h"
 // #include <stdio.h>
-// #include <stdlib.h>
+#include <stdlib.h>
+
+// xwt
+int xwt_insn_is_16bit = 0;
 
 
 /* global register indices */
@@ -1123,12 +1126,14 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx, uint16_t opcode)
     ctx->virt_inst_excp = false;
     /* Check for compressed insn */
     if (insn_len(opcode) == 2) {
+        xwt_insn_is_16bit = 1;
         ctx->opcode = opcode;
         ctx->pc_succ_insn = ctx->base.pc_next + 2;
         if (has_ext(ctx, RVC) && decode_insn16(ctx, opcode)) {
             return;
         }
     } else {
+        xwt_insn_is_16bit = 0;
         uint32_t opcode32 = opcode;
         opcode32 = deposit32(opcode32, 16, 16,
                              translator_lduw(env, &ctx->base,
@@ -1206,7 +1211,12 @@ static void riscv_tr_insn_start(DisasContextBase *dcbase, CPUState *cpu)
 
 //xwt
 typedef struct {
-    target_ulong *data;     
+    target_ulong *insn_addr_arr;
+    uint32_t *insn_machine_code_arr;
+}machine_code_info;
+
+typedef struct {
+    machine_code_info *mci;
     int size;    
     int capacity;
 } target_ulong_Array;
@@ -1216,38 +1226,77 @@ int is_init_xwt=0;
 int global_host_addr_xwt_num=0;
 
 void init_target_ulong_Array(int initialCapacity);
-void append_target_ulong_Array(target_ulong_Array *arr, target_ulong value);
+void append_target_ulong_Array(target_ulong_Array *arr, machine_code_info *info);
 void free_target_ulong_Array(target_ulong_Array *arr);
-target_ulong get_target_ulong_Array_data(target_ulong_Array *arr,int offsets);
+machine_code_info * get_target_ulong_Array_data(target_ulong_Array *arr,int offsets);
+void init_machine_code_info(machine_code_info * info,int initialCapacity);
+void free_machine_code_info(machine_code_info *mci);
+
+void init_machine_code_info(machine_code_info * info,int initialCapacity){
+    info->insn_addr_arr= (target_ulong *)malloc(initialCapacity * sizeof(target_ulong));
+    info->insn_machine_code_arr= (uint32_t *)malloc(initialCapacity * sizeof(uint32_t));
+}
+
+void free_machine_code_info(machine_code_info *mci) {
+    if (mci == NULL) {
+        return; // 避免处理空指针
+    }
+    // 释放 insn_addr_arr 和 insn_machine_code_arr 的内存
+    if (mci->insn_addr_arr != NULL) {
+        free(mci->insn_addr_arr);
+    }
+    if (mci->insn_machine_code_arr != NULL) {
+        free(mci->insn_machine_code_arr);
+    }
+    // 释放 machine_code_info 结构的内存
+    free(mci);
+}
 
 void init_target_ulong_Array(int initialCapacity) {
     global_host_addr_xwt = (target_ulong_Array *)malloc(sizeof(target_ulong_Array));
-    global_host_addr_xwt->data = (target_ulong *)malloc(initialCapacity * sizeof(target_ulong));
+    global_host_addr_xwt->mci = (machine_code_info *)malloc(sizeof(machine_code_info));
+    init_machine_code_info(global_host_addr_xwt->mci,initialCapacity);
+    // global_host_addr_xwt->mci->insn_addr_arr = (target_ulong *)malloc(initialCapacity * sizeof(target_ulong));
+    // global_host_addr_xwt->mci->insn_machine_code_arr = (uint32_t *)malloc(initialCapacity * sizeof(uint32_t));
     global_host_addr_xwt->size = 0;
     global_host_addr_xwt->capacity = initialCapacity;
 }
 
 
-void append_target_ulong_Array(target_ulong_Array *arr, target_ulong value) {
+void append_target_ulong_Array(target_ulong_Array *arr, machine_code_info *info) {
     // printf("append_target_ulong enter");
     // printf("%d\n",arr->size);
     if (arr->size >= arr->capacity) {
         arr->capacity *= 2;
-        arr->data = (target_ulong *)realloc(arr->data, arr->capacity * sizeof(target_ulong));
+        arr->mci->insn_addr_arr = (target_ulong *)realloc(arr->mci->insn_addr_arr, arr->capacity * sizeof(target_ulong));
+        arr->mci->insn_machine_code_arr = (uint32_t *)realloc(arr->mci->insn_machine_code_arr, arr->capacity * sizeof(uint32_t));
     }
-    arr->data[arr->size++] = value;
+    arr->mci->insn_addr_arr[arr->size] = *(info->insn_addr_arr);
+    arr->mci->insn_machine_code_arr[arr->size] = *(info->insn_machine_code_arr);
+    arr->size++;
 }
 
-target_ulong get_target_ulong_Array_data(target_ulong_Array *arr,int offsets){
-    return *(arr->data + offsets);
+machine_code_info * get_target_ulong_Array_data(target_ulong_Array *arr,int offsets){
+    return arr->mci;
 }
 
-void free_target_ulong_Array(target_ulong_Array *arr) {
-    free(arr->data);
-    arr->data = NULL;
-    arr->size = arr->capacity = 0;
+void free_target_ulong_Array(target_ulong_Array *array) {
+    if (array == NULL) {
+        return; // 避免处理空指针
+    }
+    if (array->mci != NULL) {
+        for (int i = 0; i < array->size; i++) {
+            if (array->mci[i].insn_addr_arr != NULL) {
+                free(array->mci[i].insn_addr_arr);
+            }
+            if (array->mci[i].insn_machine_code_arr != NULL) {
+                free(array->mci[i].insn_machine_code_arr);
+            }
+        }
+        free(array->mci);
+    }
+    free(array);
 }
-
 
 
 static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
@@ -1263,16 +1312,85 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
     
     
     // printf("%lld\n",(long long unsigned int)(dcbase->pc_next));
-    append_target_ulong_Array(global_host_addr_xwt,dcbase->pc_next);
-    printf("%d条guest指令地址: %llu\n",global_host_addr_xwt_num,(long long unsigned int)(get_target_ulong_Array_data(global_host_addr_xwt,global_host_addr_xwt_num)));
+
+
+    // printf("%d条guest指令地址: %llu\n",global_host_addr_xwt_num,(long long unsigned int)(get_target_ulong_Array_data(global_host_addr_xwt,global_host_addr_xwt_num)));
+    
     // printf("%lld\n",(long long)*(global_host_addr_xwt->data));
     global_host_addr_xwt_num++;
+
     DisasContext *ctx = container_of(dcbase, DisasContext, base);
     CPURISCVState *env = cpu->env_ptr;
     uint16_t opcode16 = translator_lduw(env, &ctx->base, ctx->base.pc_next);
 
     ctx->ol = ctx->xl;
     decode_opc(env, ctx, opcode16);
+
+    //添加一个machine_code_info
+    machine_code_info * info_now = (machine_code_info *)malloc(sizeof(machine_code_info));
+    init_machine_code_info(info_now,2);
+    *(info_now->insn_addr_arr)=dcbase->pc_next;
+    *(info_now->insn_machine_code_arr) = ctx->opcode;
+    append_target_ulong_Array(global_host_addr_xwt,info_now);
+    free_machine_code_info(info_now);
+    //debug前面的内容
+    // xwt
+    char *xwt_path_report_value = getenv("xwt_path_report");
+    if (xwt_path_report_value != NULL) {
+        // printf("环境变量 xwt_path_report 的值是：%s\n", xwt_path_report_value);
+        FILE *file = fopen(xwt_path_report_value, "a");
+        if (file == NULL) {
+            perror("无法打开文件");
+            return;
+        }
+        if(global_host_addr_xwt_num>0){
+            fprintf(file, "%d条guest指令地址: %llu\n",global_host_addr_xwt_num,
+                    global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
+            if(xwt_insn_is_16bit){
+                uint16_t now_insn_machine_code = ctx->opcode;
+                fprintf(file, "当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",
+                global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
+            }else{
+                uint32_t now_insn_machine_code = ctx->opcode;
+                fprintf(file, "当前指令没有经过compress压缩,占用四个字节,机器码为%x\n",
+                global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
+            }
+            // fprintf(file, "机器码为%x\n",global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
+        }
+
+        // int h_size = global_host_addr_xwt->size;
+        // for(int i = 0 ;i < h_size;i++){
+        //     fprintf(file, "%d条guest指令地址: %llu\n",i+1,
+        //         global_host_addr_xwt->mci->insn_addr_arr[i]);
+        //     fprintf(file, "机器码为%x\n",global_host_addr_xwt->mci->insn_machine_code_arr[i]);
+        // }
+
+
+        // fprintf(file, "%d条guest指令地址: %llu\n",global_host_addr_xwt_num,
+        // (long long unsigned int)(get_target_ulong_Array_data(global_host_addr_xwt,global_host_addr_xwt_num)));
+        
+        // if(xwt_insn_is_16bit){
+        //     uint16_t now_insn_machine_code = ctx->opcode;
+        //     fprintf(file, "当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",now_insn_machine_code);
+        // }else{
+        //     uint32_t now_insn_machine_code = ctx->opcode;
+        //     fprintf(file, "当前指令没有经过compress压缩,占用四个字节,机器码为%x\n",now_insn_machine_code);
+        // }
+        fclose(file);
+        // fprintf(file, "这是一个示例文件。\n");
+    } else {
+        printf("环境变量 xwt_path_report 不存在\n");
+    }
+
+    // if(xwt_insn_is_16bit){
+    //     uint16_t now_insn_machine_code = ctx->opcode;
+    //     printf("当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",now_insn_machine_code);
+    // }else{
+    //     uint32_t now_insn_machine_code = ctx->opcode;
+    //     printf("当前指令没有经过compress压缩,占用四个字节,机器码为%x\n",now_insn_machine_code);
+    // }
+
+
     ctx->base.pc_next = ctx->pc_succ_insn;
 
     /* Only the first insn within a TB is allowed to cross a page boundary. */

@@ -1,3 +1,4 @@
+./QEMU/qemu/core.*
 ./QEMU/qemu/build/
 ./QEMU/qemu/GNUmakefile
 ./QEMU/qemu/.cache/
@@ -20,4 +21,3 @@
 ./QEMU/qemu/*.swp
 ./QEMU/qemu/*.patch
 ./QEMU/qemu/*.gcov
-./QEMU/qemu/core.*

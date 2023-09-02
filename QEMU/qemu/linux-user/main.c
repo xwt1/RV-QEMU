@@ -55,6 +55,8 @@
 #include "loader.h"
 #include "user-mmap.h"
 #include "accel/tcg/perf.h"
+//xwt
+#include <stdlib.h>
 
 #ifdef CONFIG_SEMIHOSTING
 #include "semihosting/semihost.h"
@@ -667,8 +669,26 @@ static int parse_args(int argc, char **argv)
     return optind;
 }
 
+//xwt
+
 int main(int argc, char **argv, char **envp)
 {
+    //xwt
+     if (argc >= 3) {
+        printf("xwt第二个参数是：%s\n", argv[2]);
+        const char *varName = "xwt_path_report";
+        const char *varValue = argv[2];
+
+        // 设置环境变量
+        if (setenv(varName, varValue, 1) != 0) {
+            perror("设置环境变量失败");
+            return 1;
+        }
+    } else {
+        printf("没有提供第二个参数。\n");
+    }
+
+
     struct target_pt_regs regs1, *regs = &regs1;
     struct image_info info1, *info = &info1;
     struct linux_binprm bprm;

@@ -462,7 +462,7 @@ cpu_tb_exec(CPUState *cpu, TranslationBlock *itb, int *tb_exit)
 
     qemu_thread_jit_execute();
     //xwt
-    printf("enter tcg_qemu_tb_exec block\n");
+    // printf("enter tcg_qemu_tb_exec block\n");
     ret = tcg_qemu_tb_exec(env, tb_ptr);
     cpu->can_do_io = 1;
     qemu_plugin_disable_mem_helpers(cpu);
