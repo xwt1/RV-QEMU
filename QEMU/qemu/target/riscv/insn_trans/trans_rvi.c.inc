@@ -18,6 +18,9 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
+#include <stdlib.h>
+
 static bool trans_illegal(DisasContext *ctx, arg_empty *a)
 {
     gen_exception_illegal(ctx);
@@ -215,8 +218,35 @@ static bool gen_load_tl(DisasContext *ctx, arg_lb *a, MemOp memop)
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv addr = get_address(ctx, a->rs1, a->imm);
 
+    TCGv addr_before = addr;
+    //printf("%d",*(int *)addr_before);
     tcg_gen_qemu_ld_tl(dest, addr, ctx->mem_idx, memop);
+    TCGv dest_after = dest;
     gen_set_gpr(ctx, a->rd, dest);
+    char *xwt_path_report_value = getenv("xwt_path_report");
+    if (xwt_path_report_value != NULL) {
+        //printf("进入gen_load_tl中");
+        FILE *file = fopen(xwt_path_report_value, "a");
+        if (file == NULL) {
+            perror("无法打开文件");
+            return;
+        }
+
+        //fprintf(file,"到gen_load_tl这一步机器码为 :%x\nload指令源寄存器rs1的编号为: %u\nload指令源寄存器rs1寄存器的值为: %llu\n load指令的目标寄存器编号为: %u\nguest源地址为: %llu\nload出来的值为:%llu\n"
+        //            ,ctx->opcode,a->rs1,get_gpr(ctx,a->rs1,EXT_NONE),a->rd,addr,dest_gpr(ctx, a->rd));
+
+        //fprintf(file,"rs1 dest版本 其中的值为:%llu\n",dest_gpr(ctx,a->rs1));
+        //fprintf(file,"立即数imm为%llu\n操作前的地址%llu\n",
+        //            a->imm,addr_before);
+        //fprintf(file,"地址中的值为%llu\n",dest_after);
+
+        //fprintf(file,"实际的load地址中的值: %x\n",*(TCGTemp *)tcgv_tl_temp(addr));
+        fprintf(file,"本条为load类指令,机器码为: %llx\n",ctx->opcode);
+        fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        fclose(file);
+    }else{
+        printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    }
     return true;
 }
 
@@ -245,6 +275,19 @@ static bool gen_load_i128(DisasContext *ctx, arg_lb *a, MemOp memop)
     }
 
     gen_set_gpr128(ctx, a->rd, destl, desth);
+
+    //char *xwt_path_report_value = getenv("xwt_path_report");
+    //if (xwt_path_report_value != NULL) {
+    //   FILE *file = fopen(xwt_path_report_value, "a");
+    //    if (file == NULL) {
+    //        perror("无法打开文件");
+    //        return;
+    //    }
+    //    fprintf(file,"128Load的值为%llx%llx\n",desth,destl);
+    //    fclose(file);
+    //}else{
+    //    printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    //}
     return true;
 }
 
@@ -313,6 +356,22 @@ static bool gen_store_tl(DisasContext *ctx, arg_sb *a, MemOp memop)
     TCGv data = get_gpr(ctx, a->rs2, EXT_NONE);
 
     tcg_gen_qemu_st_tl(data, addr, ctx->mem_idx, memop);
+
+    char *xwt_path_report_value = getenv("xwt_path_report");
+    if (xwt_path_report_value != NULL) {
+        FILE *file = fopen(xwt_path_report_value, "a");
+        if (file == NULL) {
+            perror("无法打开文件");
+            return;
+        }
+
+        fprintf(file,"本条为store类指令,机器码为: %llx\n",ctx->opcode);
+        fprintf(file,"store的值为: %lld\n",data);
+        fclose(file);
+    }else{
+        printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    }
+
     return true;
 }
 

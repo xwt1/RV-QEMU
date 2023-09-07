@@ -788,12 +788,43 @@ static int ex_rvc_shiftri(DisasContext *ctx, int imm)
 /* Include the auto-generated decoder for 32 bit insn */
 #include "decode-insn32.c.inc"
 
+/*
+    0: Neither load or store
+    1: load
+    2: store
+*/
+// bool is_load_store = 0;
+
+// void print_is_load(char *fun_name);
+
+// void print_is_load(char *fun_name){
+//     char *xwt_path_report_value = getenv("xwt_path_report");
+//     if (xwt_path_report_value != NULL) {
+//     // printf("环境变量 xwt_path_report 的值是：%s\n", xwt_path_report_value);
+//         FILE *file = fopen(xwt_path_report_value, "a");
+//         if (file == NULL) {
+//             perror("无法打开文件");
+//             return;
+//         }
+//         printf("为什么不显示????别折磨了\n");
+//         fprintf(file,"目前是 %s函数生成转换当前的指令\n",fun_name);
+//         if(is_load_store){
+//             fprintf(file,"目前在%s函数中,并且本函数和LD指令有关系\n",fun_name);
+//         }
+//         fclose(file);
+//     }
+// }
+
 static bool gen_logic_imm_fn(DisasContext *ctx, arg_i *a,
                              void (*func)(TCGv, TCGv, target_long))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_logic_imm_fn\n");
+    // }
+    // print_is_load("gen_logic_imm_fn");
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv src1 = get_gpr(ctx, a->rs1, EXT_NONE);
-
+    
     func(dest, src1, a->imm);
 
     if (get_xl(ctx) == MXL_RV128) {
@@ -812,6 +843,11 @@ static bool gen_logic_imm_fn(DisasContext *ctx, arg_i *a,
 static bool gen_logic(DisasContext *ctx, arg_r *a,
                       void (*func)(TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_logic\n");
+    // }
+    // print_is_load("gen_logic");
+    // printf("gen_logic\n");
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv src1 = get_gpr(ctx, a->rs1, EXT_NONE);
     TCGv src2 = get_gpr(ctx, a->rs2, EXT_NONE);
@@ -836,6 +872,11 @@ static bool gen_arith_imm_fn(DisasContext *ctx, arg_i *a, DisasExtend ext,
                              void (*func)(TCGv, TCGv, target_long),
                              void (*f128)(TCGv, TCGv, TCGv, TCGv, target_long))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_arith_imm_fn\n");
+    // }
+    // print_is_load("gen_arith_imm_fn");
+    // printf("gen_arith_imm_fn\n");
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv src1 = get_gpr(ctx, a->rs1, ext);
 
@@ -864,6 +905,11 @@ static bool gen_arith_imm_tl(DisasContext *ctx, arg_i *a, DisasExtend ext,
     TCGv src1 = get_gpr(ctx, a->rs1, ext);
     TCGv src2 = tcg_constant_tl(a->imm);
 
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_arith_imm_tl\n");
+    // }
+    // print_is_load("gen_arith_imm_tl");
+    // printf("gen_arith_imm_tl\n");
     if (get_ol(ctx) < MXL_RV128) {
         func(dest, src1, src2);
         gen_set_gpr(ctx, a->rd, dest);
@@ -886,6 +932,11 @@ static bool gen_arith(DisasContext *ctx, arg_r *a, DisasExtend ext,
                       void (*func)(TCGv, TCGv, TCGv),
                       void (*f128)(TCGv, TCGv, TCGv, TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_arith\n");
+    // }
+    // print_is_load("gen_arith");
+    // printf("gen_arith\n");
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv src1 = get_gpr(ctx, a->rs1, ext);
     TCGv src2 = get_gpr(ctx, a->rs2, ext);
@@ -913,6 +964,11 @@ static bool gen_arith_per_ol(DisasContext *ctx, arg_r *a, DisasExtend ext,
                              void (*f_32)(TCGv, TCGv, TCGv),
                              void (*f_128)(TCGv, TCGv, TCGv, TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_arith_per_ol\n");
+    // }
+    // print_is_load("gen_arith_per_ol");
+    // printf("gen_arith_per_ol\n");
     int olen = get_olen(ctx);
 
     if (olen != TARGET_LONG_BITS) {
@@ -929,6 +985,11 @@ static bool gen_shift_imm_fn(DisasContext *ctx, arg_shift *a, DisasExtend ext,
                              void (*func)(TCGv, TCGv, target_long),
                              void (*f128)(TCGv, TCGv, TCGv, TCGv, target_long))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_shift_imm_fn\n");
+    // }
+    // print_is_load("gen_shift_imm_fn");
+    // printf("gen_shift_imm_fn\n");
     TCGv dest, src1;
     int max_len = get_olen(ctx);
 
@@ -962,6 +1023,11 @@ static bool gen_shift_imm_fn_per_ol(DisasContext *ctx, arg_shift *a,
                                     void (*f_128)(TCGv, TCGv, TCGv, TCGv,
                                                   target_long))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_shift_imm_fn_per_ol\n");
+    // }
+    // print_is_load("gen_shift_imm_fn_per_ol");
+    // printf("gen_shift_imm_fn_per_ol\n");
     int olen = get_olen(ctx);
     if (olen != TARGET_LONG_BITS) {
         if (olen == 32) {
@@ -976,6 +1042,11 @@ static bool gen_shift_imm_fn_per_ol(DisasContext *ctx, arg_shift *a,
 static bool gen_shift_imm_tl(DisasContext *ctx, arg_shift *a, DisasExtend ext,
                              void (*func)(TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_shift_imm_tl\n");
+    // }
+    // print_is_load("gen_shift_imm_tl");
+    // printf("gen_shift_imm_tl\n");
     TCGv dest, src1, src2;
     int max_len = get_olen(ctx);
 
@@ -997,6 +1068,11 @@ static bool gen_shift(DisasContext *ctx, arg_r *a, DisasExtend ext,
                       void (*func)(TCGv, TCGv, TCGv),
                       void (*f128)(TCGv, TCGv, TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_shift\n");
+    // }
+    // print_is_load("gen_shift");
+    // printf("gen_shift\n");
     TCGv src2 = get_gpr(ctx, a->rs2, EXT_NONE);
     TCGv ext2 = tcg_temp_new();
     int max_len = get_olen(ctx);
@@ -1027,6 +1103,11 @@ static bool gen_shift_per_ol(DisasContext *ctx, arg_r *a, DisasExtend ext,
                              void (*f_32)(TCGv, TCGv, TCGv),
                              void (*f_128)(TCGv, TCGv, TCGv, TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_shift_per_ol\n");
+    // }
+    // print_is_load("gen_shift_per_ol");
+    // printf("gen_shift_per_ol\n");
     int olen = get_olen(ctx);
     if (olen != TARGET_LONG_BITS) {
         if (olen == 32) {
@@ -1041,6 +1122,11 @@ static bool gen_shift_per_ol(DisasContext *ctx, arg_r *a, DisasExtend ext,
 static bool gen_unary(DisasContext *ctx, arg_r2 *a, DisasExtend ext,
                       void (*func)(TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_unary\n");
+    // }
+    // print_is_load("gen_unary");
+    // printf("gen_unary\n");
     TCGv dest = dest_gpr(ctx, a->rd);
     TCGv src1 = get_gpr(ctx, a->rs1, ext);
 
@@ -1054,6 +1140,11 @@ static bool gen_unary_per_ol(DisasContext *ctx, arg_r2 *a, DisasExtend ext,
                              void (*f_tl)(TCGv, TCGv),
                              void (*f_32)(TCGv, TCGv))
 {
+    // if(is_load_store == 1){
+    //     printf("现在有一条LD指令,产生自gen_unary_per_ol\n");
+    // }
+    // print_is_load("gen_unary_per_ol");
+    // printf("gen_unary_per_ol\n");
     int olen = get_olen(ctx);
 
     if (olen != TARGET_LONG_BITS) {
@@ -1126,6 +1217,9 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx, uint16_t opcode)
     ctx->virt_inst_excp = false;
     /* Check for compressed insn */
     if (insn_len(opcode) == 2) {
+                
+        // is_load_store = 0;
+
         xwt_insn_is_16bit = 1;
         ctx->opcode = opcode;
         ctx->pc_succ_insn = ctx->base.pc_next + 2;
@@ -1135,12 +1229,21 @@ static void decode_opc(CPURISCVState *env, DisasContext *ctx, uint16_t opcode)
     } else {
         xwt_insn_is_16bit = 0;
         uint32_t opcode32 = opcode;
+
         opcode32 = deposit32(opcode32, 16, 16,
                              translator_lduw(env, &ctx->base,
                                              ctx->base.pc_next + 2));
         ctx->opcode = opcode32;
         ctx->pc_succ_insn = ctx->base.pc_next + 4;
 
+        // if(!((opcode32 & 0b1111111) ^ 0b0000011)&&
+        //     !(opcode32 &0b111000000000000)^0b011000000000000){
+        //     is_load_store = 1;
+        //     printf("检测到LD指令:%x\n",opcode32);
+        //     //LD指令
+        // }else{
+        //     is_load_store = 0;
+        // }
         for (size_t i = 0; i < ARRAY_SIZE(decoders); ++i) {
             if (decoders[i].guard_func(ctx) &&
                 decoders[i].decode_func(ctx, opcode32)) {
@@ -1310,7 +1413,7 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
         // append_target_ulong_Array(global_host_addr_xwt,1);
     }  
     
-    
+
     // printf("%lld\n",(long long unsigned int)(dcbase->pc_next));
 
 
@@ -1319,13 +1422,23 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
     // printf("%lld\n",(long long)*(global_host_addr_xwt->data));
     global_host_addr_xwt_num++;
 
+
     DisasContext *ctx = container_of(dcbase, DisasContext, base);
     CPURISCVState *env = cpu->env_ptr;
     uint16_t opcode16 = translator_lduw(env, &ctx->base, ctx->base.pc_next);
 
+
+    target_ulong opcode_before = opcode16;
+
+
     ctx->ol = ctx->xl;
     decode_opc(env, ctx, opcode16);
 
+    
+    // RISCVCPU *xwt1_cpu_now = RISCV_CPU(cpu);
+    // CPURISCVState *xwt1_env = &xwt1_cpu_now->env;
+    TCGv mem_access_xwt = get_address(ctx,20,0);
+    target_ulong xwt_reg15 = env->gpr[14];
     //添加一个machine_code_info
     machine_code_info * info_now = (machine_code_info *)malloc(sizeof(machine_code_info));
     init_machine_code_info(info_now,2);
@@ -1344,17 +1457,27 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
             return;
         }
         if(global_host_addr_xwt_num>0){
-            fprintf(file, "%d条guest指令地址: %llu\n",global_host_addr_xwt_num,
-                    global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
-            if(xwt_insn_is_16bit){
-                uint16_t now_insn_machine_code = ctx->opcode;
-                fprintf(file, "当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",
-                global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
-            }else{
-                uint32_t now_insn_machine_code = ctx->opcode;
-                fprintf(file, "当前指令没有经过compress压缩,占用四个字节,机器码为%x\n",
-                global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
-            }
+            fprintf(file, "当前为%d条guest指令\n", global_host_addr_xwt_num);
+            // fprintf(file, "%d条guest指令地址: %llu\n",global_host_addr_xwt_num,
+            //         global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
+
+            // if(xwt_insn_is_16bit){
+            //     uint16_t now_insn_machine_code = ctx->opcode;
+            //     fprintf(file, "当前指令为compress压缩后的指令,占用两个字节\n");
+            //     // fprintf(file, "当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",
+            //     // global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
+            // }else{
+            //     uint32_t now_insn_machine_code = ctx->opcode;
+            //     fprintf(file, "当前指令没有经过compress压缩,占用四个字节\n");
+            // }
+
+            // fprintf(file, "第15个通用寄存器的值为: %llu\n",xwt_reg15);
+            // fprintf(file, "第20个通用寄存器指向的内存地址值为: %llu\n",mem_access_xwt);
+            // fprintf(file, "opcode以前 %x\n",opcode_before);
+            // if(mem_access_xwt == xwt_reg15){
+            //     fprintf(file, "YES相等\n");
+            // }
+            // if()
             // fprintf(file, "机器码为%x\n",global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
         }
 

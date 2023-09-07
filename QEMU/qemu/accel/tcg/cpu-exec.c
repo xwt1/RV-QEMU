@@ -447,7 +447,7 @@ const void *HELPER(lookup_tb_ptr)(CPUArchState *env)
  */
 
  //xwt
- int xwt_stores_is_ok =0;
+int xwt_stores_is_ok =0;
 static inline TranslationBlock * QEMU_DISABLE_CFI
 cpu_tb_exec(CPUState *cpu, TranslationBlock *itb, int *tb_exit)
 {
@@ -463,7 +463,29 @@ cpu_tb_exec(CPUState *cpu, TranslationBlock *itb, int *tb_exit)
     qemu_thread_jit_execute();
     //xwt
     // printf("enter tcg_qemu_tb_exec block\n");
+
+
     ret = tcg_qemu_tb_exec(env, tb_ptr);
+
+
+    // target_ulong xwt_reg15 = *(target_ulong*)(env + 14 * 8);
+    // CPURISCVState *xwt1_env = (CPURISCVState *)env;
+    // target_ulong xwt_reg15 = xwt1_env->gpr[14];
+    // char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     // printf("环境变量 xwt_path_report 的值是：%s\n", xwt_path_report_value);
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //     }else{
+    //         fprintf(file, "cpu-exec-第15个通用寄存器的值为: %llu\n",xwt_reg15);
+    //     }
+    //     fclose(file);
+    // }else {
+    //     printf("环境变量 xwt_path_report 不存在\n");
+    // }
+
+
     cpu->can_do_io = 1;
     qemu_plugin_disable_mem_helpers(cpu);
     /*

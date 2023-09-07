@@ -70,13 +70,13 @@ static inline uint32_t ldl_he_p(const void *ptr)
 }
 
 
-void *qemu_get_cpu(int index);
+// void *qemu_get_cpu(int index);
 
-static uint64_t get_cpu_register(unsigned int cpu_index, unsigned int reg) {
-    uint8_t* cpu = qemu_get_cpu(cpu_index);
+// static uint64_t get_cpu_register(unsigned int cpu_index, unsigned int reg) {
+//     uint8_t* cpu = qemu_get_cpu(cpu_index);
 
-    return *(uint64_t *)(cpu + 33488 + 5424 + reg * 8);
-}
+//     return *(uint64_t *)(cpu + 33488 + 5424 + reg * 8);
+// }
 
 /**
  * Add memory read or write information to current instruction log
@@ -136,7 +136,7 @@ static void vcpu_insn_exec(unsigned int cpu_index, void *udata)
         // qemu_plugin_outs(s->str);
         // qemu_plugin_outs("\n");
     }
-    printf("123xwt\n");
+    // printf("123xwt\n");
     // xwt_insn *execd_insn = (xwt_insn *)udata;
     // struct qemu_plugin_insn *insn = execd_insn->insn;
     // char *insn_disas = qemu_plugin_insn_disas(insn);
