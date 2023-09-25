@@ -32,7 +32,7 @@
 
 #include "instmap.h"
 #include "internals.h"
-// #include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 // xwt
@@ -574,6 +574,7 @@ static TCGv get_address(DisasContext *ctx, int rs1, int imm)
     TCGv src1 = get_gpr(ctx, rs1, EXT_NONE);
 
     tcg_gen_addi_tl(addr, src1, imm);
+    // printf("addr before:%lld\n",addr);
     if (ctx->pm_mask_enabled) {
         tcg_gen_andc_tl(addr, addr, pm_mask);
     } else if (get_xl(ctx) == MXL_RV32) {
@@ -582,6 +583,7 @@ static TCGv get_address(DisasContext *ctx, int rs1, int imm)
     if (ctx->pm_base_enabled) {
         tcg_gen_or_tl(addr, addr, pm_base);
     }
+    // printf("addr after:%lld\n",addr);
     return addr;
 }
 
@@ -1328,6 +1330,9 @@ target_ulong_Array *global_host_addr_xwt;
 int is_init_xwt=0;
 int global_host_addr_xwt_num=0;
 
+target_ulong current_ins_addr = 12345;
+
+
 void init_target_ulong_Array(int initialCapacity);
 void append_target_ulong_Array(target_ulong_Array *arr, machine_code_info *info);
 void free_target_ulong_Array(target_ulong_Array *arr);
@@ -1402,6 +1407,116 @@ void free_target_ulong_Array(target_ulong_Array *array) {
 }
 
 
+
+#define INITIAL_TABLE_SIZE 10
+#define LOAD_FACTOR_THRESHOLD 0.7
+
+// 哈希表节点结构
+typedef struct HashNode {
+    void *key; // 使用 void 指针来存储结构体指针
+    int value;
+} HashNode;
+
+// 哈希表结构
+typedef struct HashTable {
+    HashNode **table;
+    size_t size;
+    size_t count;
+} HashTable;
+
+// 创建哈希表
+HashTable* createHashTable() {
+    HashTable *hashTable = (HashTable*)malloc(sizeof(HashTable));
+    hashTable->table = (HashNode**)calloc(INITIAL_TABLE_SIZE, sizeof(HashNode*));
+    hashTable->size = INITIAL_TABLE_SIZE;
+    hashTable->count = 0;
+    return hashTable;
+}
+
+// 计算哈希值，针对结构体指针的哈希函数
+size_t hash(HashTable *hashTable, void *key) {
+    // 你可以根据结构体指针的内容计算哈希值
+    // 这里只是一个示例，实际应根据结构体内容设计哈希函数
+    return (size_t)key % hashTable->size;
+}
+
+// 比较结构体指针是否相等的函数
+int compareKeys(void *key1, void *key2) {
+    // 你需要根据实际的结构体内容来定义比较函数
+    // 这里只是一个示例，实际应根据结构体内容进行比较
+    return (key1 == key2);
+}
+
+// 插入键值对，支持结构体指针作为键
+void insert_bb(HashTable *hashTable, void *key, int value) {
+    if ((double)hashTable->count / hashTable->size >= LOAD_FACTOR_THRESHOLD) {
+        // 触发扩容
+        size_t newSize = hashTable->size * 2;
+        HashNode **newTable = (HashNode**)calloc(newSize, sizeof(HashNode*));
+
+        for (size_t i = 0; i < hashTable->size; i++) {
+            HashNode *node = hashTable->table[i];
+            if (node != NULL) {
+                size_t newIndex = hash(hashTable, node->key);
+                while (newTable[newIndex] != NULL) {
+                    newIndex = (newIndex + 1) % newSize;
+                }
+                newTable[newIndex] = node;
+            }
+        }
+
+        free(hashTable->table);
+        hashTable->table = newTable;
+        hashTable->size = newSize;
+    }
+
+    size_t index = hash(hashTable, key);
+    while (hashTable->table[index] != NULL) {
+        if (compareKeys(hashTable->table[index]->key, key)) {
+            // 如果键已经存在，更新值
+            hashTable->table[index]->value = value;
+            return;
+        }
+        // 处理碰撞，线性探测法
+        index = (index + 1) % hashTable->size;
+    }
+
+    // 创建新节点
+    HashNode *newNode = (HashNode*)malloc(sizeof(HashNode));
+    newNode->key = key;
+    newNode->value = value;
+    hashTable->table[index] = newNode;
+    hashTable->count++;
+}
+
+// 查找键对应的值，支持结构体指针作为键
+int find_bb(HashTable *hashTable, void *key) {
+    size_t index = hash(hashTable, key);
+    while (hashTable->table[index] != NULL) {
+        if (compareKeys(hashTable->table[index]->key, key)) {
+            return hashTable->table[index]->value;
+        }
+        index = (index + 1) % hashTable->size;
+    }
+    return -1; // 未找到
+}
+
+// 销毁哈希表
+void destroyHashTable(HashTable *hashTable) {
+    for (size_t i = 0; i < hashTable->size; i++) {
+        if (hashTable->table[i] != NULL) {
+            free(hashTable->table[i]);
+        }
+    }
+    free(hashTable->table);
+    free(hashTable);
+}
+
+
+HashTable *xwt_hash_bb = NULL;
+int now_bb_index_size = 1;
+int now_bb_number =1;
+
 static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
 {
     //xwt
@@ -1412,8 +1527,21 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
         // printf("is_init_xwt ok\n");
         // append_target_ulong_Array(global_host_addr_xwt,1);
     }  
-    
+    if(xwt_hash_bb == NULL){
+        xwt_hash_bb = createHashTable();
 
+    }
+    int ret_values =find_bb(xwt_hash_bb,dcbase->tb);
+    if(ret_values==-1){
+        insert_bb(xwt_hash_bb,dcbase->tb,now_bb_index_size);
+        now_bb_number = now_bb_index_size;
+        now_bb_index_size++;
+        // printf("没命中\n");
+    }else{
+        now_bb_number = ret_values;
+        // printf("命中\n");
+    }
+    
     // printf("%lld\n",(long long unsigned int)(dcbase->pc_next));
 
 
@@ -1437,11 +1565,12 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
     
     // RISCVCPU *xwt1_cpu_now = RISCV_CPU(cpu);
     // CPURISCVState *xwt1_env = &xwt1_cpu_now->env;
-    TCGv mem_access_xwt = get_address(ctx,20,0);
+    // TCGv mem_access_xwt = get_address(ctx,20,0);
     target_ulong xwt_reg15 = env->gpr[14];
     //添加一个machine_code_info
     machine_code_info * info_now = (machine_code_info *)malloc(sizeof(machine_code_info));
     init_machine_code_info(info_now,2);
+    current_ins_addr = dcbase->pc_next;
     *(info_now->insn_addr_arr)=dcbase->pc_next;
     *(info_now->insn_machine_code_arr) = ctx->opcode;
     append_target_ulong_Array(global_host_addr_xwt,info_now);
@@ -1457,19 +1586,22 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
             return;
         }
         if(global_host_addr_xwt_num>0){
-            fprintf(file, "当前为%d条guest指令\n", global_host_addr_xwt_num);
-            // fprintf(file, "%d条guest指令地址: %llu\n",global_host_addr_xwt_num,
-            //         global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
+            //xwt更改9.13
+            // fprintf(file, "当前为%d条guest指令\n", global_host_addr_xwt_num);
 
-            // if(xwt_insn_is_16bit){
-            //     uint16_t now_insn_machine_code = ctx->opcode;
-            //     fprintf(file, "当前指令为compress压缩后的指令,占用两个字节\n");
-            //     // fprintf(file, "当前指令为compress压缩后的指令,占用两个字节,机器码为%x\n",
-            //     // global_host_addr_xwt->mci->insn_machine_code_arr[global_host_addr_xwt_num -1]);
-            // }else{
-            //     uint32_t now_insn_machine_code = ctx->opcode;
-            //     fprintf(file, "当前指令没有经过compress压缩,占用四个字节\n");
-            // }
+
+            fprintf(file, "%d条guest指令地址: %llx\n",global_host_addr_xwt_num,
+                    global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
+
+            if(xwt_insn_is_16bit){
+                uint16_t now_insn_machine_code = ctx->opcode;
+                fprintf(file, "当前指令为compress压缩后的指令,占用两个字节\n");
+                fprintf(file, "机器码为%llx\n",ctx->opcode);
+            }else{
+                uint32_t now_insn_machine_code = ctx->opcode;
+                fprintf(file, "当前指令没有经过compress压缩,占用四个字节\n");
+                fprintf(file, "机器码为%llx\n",ctx->opcode);
+            }
 
             // fprintf(file, "第15个通用寄存器的值为: %llu\n",xwt_reg15);
             // fprintf(file, "第20个通用寄存器指向的内存地址值为: %llu\n",mem_access_xwt);
@@ -1621,3 +1753,5 @@ void riscv_translate_init(void)
     pm_base = tcg_global_mem_new(cpu_env, offsetof(CPURISCVState, cur_pmbase),
                                  "pmbase");
 }
+
+

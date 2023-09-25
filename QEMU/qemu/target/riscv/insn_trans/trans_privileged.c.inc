@@ -18,8 +18,12 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+extern int can_you_hear_me;
+
 static bool trans_ecall(DisasContext *ctx, arg_ecall *a)
 {
+    // can_you_hear_me=233;
+    // printf("%d\n",can_you_hear_me);
     /* always generates U-level ECALL, fixed in do_interrupt handler */
     generate_exception(ctx, RISCV_EXCP_U_ECALL);
     return true;

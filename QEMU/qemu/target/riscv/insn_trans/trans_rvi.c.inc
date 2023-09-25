@@ -21,6 +21,389 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+int can_you_hear_me = 1;
+
+extern target_ulong current_ins_addr;
+extern int now_bb_number;
+
+void appendString(char **output, const char *newString) {
+    if (*output == NULL) {
+        *output = (char *)malloc(strlen(newString) + 1);
+        if (*output == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        strcpy(*output, newString);
+    } else {
+        size_t oldLength = strlen(*output);
+        size_t newLength = strlen(newString);
+        *output = (char *)realloc(*output, oldLength + newLength + 1);
+        if (*output == NULL) {
+            perror("Memory reallocation failed");
+            exit(1);
+        }
+        strcat(*output, newString);
+    }
+}
+
+char *lltoa(long long value) {
+    int size = snprintf(NULL, 0, "%lld", value);
+    if (size < 0) {
+
+        return NULL;
+    }
+    char *result = (char *)malloc((size + 1) * sizeof(char));
+    if (result == NULL) return NULL;
+    snprintf(result, size + 1, "%lld", value);
+    return result;
+}
+
+char *ulltohex(unsigned long long value) {
+    int size = snprintf(NULL, 0, "%llx", value);
+    if (size < 0) {
+        return NULL;
+    }
+    char *result = (char *)malloc((size + 1) * sizeof(char));
+    if (result == NULL) return NULL;
+    snprintf(result, size + 1, "%llx", value);
+    return result;
+}
+
+int is32BitUnsignedInteger(uint64_t num) {
+    //return (num & 0xFFFF0000) > 0;
+    if((num & 0xFFFF0000) > 0) return 1;
+    else return 0;
+    //uint32_t num_judge = num & 0xFFFF0000;
+    //return num_judge;
+}
+
+void print_info_dis_load(DisasContext *ctx,arg_lb *a,TCGv addr,FILE *file){
+
+    // fprintf(file,"ok print_info_dis\n");
+    // fprintf(file,"本条为load类型指令,opcode: %llx\n",ctx->opcode);
+    int is_print = 0;
+    char *output_csv_str = NULL;
+    // target_ulong now_insn_addr =  ctx->base.pc_next; 
+    appendString(&output_csv_str,(long long)lltoa(now_bb_number));
+    appendString(&output_csv_str,",");
+    appendString(&output_csv_str,(unsigned long long )ulltohex(current_ins_addr));
+    appendString(&output_csv_str,",");
+    appendString(&output_csv_str,"load");
+
+    // appendString(&output_csv_str,",");
+    // appendString(&output_csv_str,(long long)lltoa(i_am_translate_c));
+
+    // appendString(&output_csv_str,",");
+    if(!is32BitUnsignedInteger(ctx->opcode)){
+        // fprintf(file,"ok 16位\n");
+        if(!((ctx->opcode & 0b011) ^0b00) && !((ctx->opcode & 0b1110000000000000) ^0b0110000000000000)){
+            // fprintf(file,"本条为load类型的c.ld指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.ld");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b011) ^0b00) && !((ctx->opcode & 0b1110000000000000) ^0b0100000000000000)){
+            // fprintf(file,"本条为load类型的c.lw指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.lw");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b0110000000000000)){
+            // fprintf(file,"本条为load类型的c.ldsp指令,机器码为: %llx\n",ctx->opcode);
+            // fprintf(file,"立即数imm为:%lld\n",a->imm);
+            // fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+            // fprintf(file,"load的源地址为: %llx\n",addr);
+            // fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+            // appendString(&output_csv_str,"c.ldsp");
+            is_print=1;
+            // return;
+        }
+        if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b0100000000000000)){
+            // fprintf(file,"本条为load类型的c.lwsp指令,机器码为: %llx\n",ctx->opcode);
+            // fprintf(file,"立即数imm为:%lld\n",a->imm);
+            // fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+            // fprintf(file,"load的源地址为: %llx\n",addr);
+            // fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+            // appendString(&output_csv_str,"c.lwsp");
+            is_print=1;
+            return;
+        }
+        // if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b0110000000000000)){
+        //     fprintf(file,"本条为load类型的c.ldsp指令,机器码为: %llx\n",ctx->opcode);
+        //     fprintf(file,"立即数imm为:%lld\n",a->imm);
+        //     fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+        //     fprintf(file,"load的源地址为: %llx\n",addr);
+        //     fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        //     return;
+        // }
+        // if(!((ctx->opcode & 0b011) ^0b01) && !((ctx->opcode & 0b1110000000000000) ^0b0100000000000000)){
+        //     fprintf(file,"本条为load类型的c.li指令,机器码为: %llx\n",ctx->opcode);
+        //     fprintf(file,"立即数imm为:%lld\n",a->imm);
+        //     fprintf(file,"load的源地址为: %llx\n",addr);
+        //     fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        //     return;
+        // }
+    }else{
+        // fprintf(file,"ok 32位\n");
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b000000000000000)){
+            // fprintf(file,"本条为load类型的lb指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lb");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b001000000000000)){
+            // fprintf(file,"本条为load类型的lh指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lh");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b010000000000000)){
+            // fprintf(file,"本条为load类型的lw指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lw");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b100000000000000)){
+            // fprintf(file,"本条为load类型的lbu指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lbu");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b101000000000000)){
+            // fprintf(file,"本条为load类型的lhu指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lhu");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b110000000000000)){
+            // fprintf(file,"本条为load类型的lwu指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"lwu");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b011000000000000)){
+            // fprintf(file,"本条为load类型的ld指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"ld");
+            is_print=1;
+        }
+        // if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b011000000000000)^0b110000000000000)){
+        //     fprintf(file,"本条为load类型的ld指令,机器码为: %llx\n",ctx->opcode);
+        // }
+    }
+    // fprintf(file,"立即数imm为:%lld\n",a->imm);
+    // fprintf(file,"rs1其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+    // fprintf(file,"load的源地址为: %lld\n",addr);
+    // fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+
+    // char *append_new_suffix = NULL;
+
+    // appendString(&output_csv_str,",");
+    // char *new_temp = lltoa((long long)a->imm);
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    // appendString(&output_csv_str,",");
+    // new_temp = lltoa((long long)dest_gpr(ctx,a->rs1));
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    // appendString(&output_csv_str,",");
+    // new_temp = lltoa((long long)addr);
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    appendString(&output_csv_str,",");
+    char *new_temp = lltoa((long long)dest_gpr(ctx, a->rd));
+    appendString(&output_csv_str,new_temp);
+    free(new_temp);
+
+    fprintf(file,"%s\n",output_csv_str);
+    free(output_csv_str);
+    // free(new_temp);
+
+    if(!is_print)    fprintf(file,"坏了,有load指令没识别到\n");
+    //char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //         return;
+    //     }
+    //     fprintf(file,"ok print_info_dis\n");
+    //     fprintf(file,"本条为load类型指令,opcode: %llx\n",ctx->opcode);
+    //     if(!is32BitUnsignedInteger(ctx->opcode)){
+    //         fprintf(file,"ok 16位\n");
+    //     }else{
+    //         fprintf(file,"ok 32位\n");
+    //         if(!((ctx->opcode & 0b01111111) ^ 0b0000011)){
+    //             fprintf(file,"本条为load类型的LD指令,机器码为: %llx\n",ctx->opcode);
+    //             fprintf(file,"立即数imm为:%lld\n",a->imm);
+    //             fprintf(file,"rs1其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+    //             fprintf(file,"load的guest虚拟地址为: %llx\n",addr);
+    //             fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+    //             return;
+    //         }
+    //     }
+    //     fclose(file);
+    // }else{
+    //     printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    // }
+}
+
+void print_info_dis_store(DisasContext *ctx,arg_sb *a,TCGv addr,FILE *file){
+
+    // fprintf(file,"ok print_info_dis\n");
+    // fprintf(file,"本条为store类型指令,opcode: %llx\n",ctx->opcode);
+    int is_print = 0;
+    char *output_csv_str = NULL;
+    // target_ulong now_insn_addr =  ctx->base.pc_next;
+    appendString(&output_csv_str,(long long)lltoa(now_bb_number));
+    appendString(&output_csv_str,","); 
+    appendString(&output_csv_str,(unsigned long long )ulltohex(current_ins_addr));
+    appendString(&output_csv_str,",");
+    appendString(&output_csv_str,"store");
+    // appendString(&output_csv_str,",");
+    if(!is32BitUnsignedInteger(ctx->opcode)){
+        // fprintf(file,"ok 16位\n");
+        if(!((ctx->opcode & 0b011) ^0b00) && !((ctx->opcode & 0b1110000000000000) ^0b1110000000000000)){
+            // fprintf(file,"本条为store类型的c.sd指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.sd");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b011) ^0b00) && !((ctx->opcode & 0b1110000000000000) ^0b1100000000000000)){
+            // fprintf(file,"本条为store类型的c.sw指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.sw");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b1110000000000000)){
+            // fprintf(file,"本条为store类型的c.sdsp指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.sdsp");
+            // fprintf(file,"立即数imm为:%lld\n",a->imm);
+            // fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+            // fprintf(file,"store的目标地址为: %llx\n",addr);
+            // fprintf(file,"store的值为: %lld\n",dest_gpr(ctx, a->rs2));
+            is_print=1;
+            // return;
+        }
+        if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b1100000000000000)){
+            // fprintf(file,"本条为store类型的c.swsp指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"c.swsp");
+            // fprintf(file,"立即数imm为:%lld\n",a->imm);
+            // fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+            // fprintf(file,"store的目标地址为: %lld\n",addr);
+            // fprintf(file,"store的值为: %lld\n",dest_gpr(ctx, a->rs2));
+            is_print=1;
+            // return;
+        }
+        // if(!((ctx->opcode & 0b011) ^0b10) && !((ctx->opcode & 0b1110000000000000) ^0b0110000000000000)){
+        //     fprintf(file,"本条为load类型的c.ldsp指令,机器码为: %llx\n",ctx->opcode);
+        //     fprintf(file,"立即数imm为:%lld\n",a->imm);
+        //     fprintf(file,"2号寄存器其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+        //     fprintf(file,"load的源地址为: %llx\n",addr);
+        //     fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        //     return;
+        // }
+        // if(!((ctx->opcode & 0b011) ^0b01) && !((ctx->opcode & 0b1110000000000000) ^0b0100000000000000)){
+        //     fprintf(file,"本条为load类型的c.li指令,机器码为: %llx\n",ctx->opcode);
+        //     fprintf(file,"立即数imm为:%lld\n",a->imm);
+        //     fprintf(file,"load的源地址为: %llx\n",addr);
+        //     fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        //     return;
+        // }
+    }else{
+        // fprintf(file,"ok 32位\n");
+        if(!((ctx->opcode & 0b01111111) ^ 0b0100011)&& !((ctx->opcode & 0b111000000000000)^0b000000000000000)){
+            // fprintf(file,"本条为store类型的sb指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"sb");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0100011)&& !((ctx->opcode & 0b111000000000000)^0b001000000000000)){
+            // fprintf(file,"本条为store类型的sh指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"sh");
+            is_print=1;
+        }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0100011)&& !((ctx->opcode & 0b111000000000000)^0b010000000000000)){
+            // fprintf(file,"本条为store类型的sw指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"sw");
+            is_print=1;
+        }
+        // if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b100000000000000)){
+        //     fprintf(file,"本条为load类型的lbu指令,机器码为: %llx\n",ctx->opcode);
+        //     is_print=1;
+        // }
+        // if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b101000000000000)){
+        //     fprintf(file,"本条为load类型的lhu指令,机器码为: %llx\n",ctx->opcode);
+        //     is_print=1;
+        // }
+        // if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b111000000000000)^0b110000000000000)){
+        //     fprintf(file,"本条为load类型的lwu指令,机器码为: %llx\n",ctx->opcode);
+        //     is_print=1;
+        // }
+        if(!((ctx->opcode & 0b01111111) ^ 0b0100011)&& !((ctx->opcode & 0b111000000000000)^0b011000000000000)){
+            // fprintf(file,"本条为store类型的sd指令,机器码为: %llx\n",ctx->opcode);
+            // appendString(&output_csv_str,"sd");
+            is_print=1;
+        }
+        // if(!((ctx->opcode & 0b01111111) ^ 0b0000011)&& !((ctx->opcode & 0b011000000000000)^0b110000000000000)){
+        //     fprintf(file,"本条为load类型的ld指令,机器码为: %llx\n",ctx->opcode);
+        // }
+    }
+    // fprintf(file,"立即数imm为:%lld\n",a->imm);
+    // fprintf(file,"rs1其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+    // fprintf(file,"store的目标地址为: %lld\n",addr);
+    // fprintf(file,"store的值为: %lld\n",dest_gpr(ctx, a->rs2));
+
+    // appendString(&output_csv_str,",");
+    // char *new_temp = lltoa((long long)a->imm);
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    // appendString(&output_csv_str,",");
+    // new_temp = lltoa((long long)dest_gpr(ctx,a->rs1));
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    // appendString(&output_csv_str,",");
+    // new_temp = lltoa((long long)addr);
+    // appendString(&output_csv_str,new_temp);
+    // free(new_temp);
+
+    appendString(&output_csv_str,",");
+    char *new_temp = lltoa((long long)dest_gpr(ctx, a->rs2));
+    appendString(&output_csv_str,new_temp);
+    free(new_temp);
+
+    fprintf(file,"%s\n",output_csv_str);
+    free(output_csv_str);
+
+
+    if(!is_print){
+        fprintf(file,"本条为store类型的指令,机器码为: %llx\n",ctx->opcode);
+        fprintf(file,"坏了,有store指令没识别到\n");
+    }    
+    //char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //         return;
+    //     }
+    //     fprintf(file,"ok print_info_dis\n");
+    //     fprintf(file,"本条为load类型指令,opcode: %llx\n",ctx->opcode);
+    //     if(!is32BitUnsignedInteger(ctx->opcode)){
+    //         fprintf(file,"ok 16位\n");
+    //     }else{
+    //         fprintf(file,"ok 32位\n");
+    //         if(!((ctx->opcode & 0b01111111) ^ 0b0000011)){
+    //             fprintf(file,"本条为load类型的LD指令,机器码为: %llx\n",ctx->opcode);
+    //             fprintf(file,"立即数imm为:%lld\n",a->imm);
+    //             fprintf(file,"rs1其中的值为:%lld\n",dest_gpr(ctx,a->rs1));
+    //             fprintf(file,"load的guest虚拟地址为: %llx\n",addr);
+    //             fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+    //             return;
+    //         }
+    //     }
+    //     fclose(file);
+    // }else{
+    //     printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    // }
+}
+
+
+
+
 static bool trans_illegal(DisasContext *ctx, arg_empty *a)
 {
     gen_exception_illegal(ctx);
@@ -36,6 +419,20 @@ static bool trans_c64_illegal(DisasContext *ctx, arg_empty *a)
 static bool trans_lui(DisasContext *ctx, arg_lui *a)
 {
     gen_set_gpri(ctx, a->rd, a->imm);
+    // char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //         return;
+    //     }
+    //     fprintf(file,"本条为load类指令,gen_load_tl中机器码为: %llx\n",ctx->opcode);
+    //     fprintf(file,"本条为load类型的立即数加载指令,机器码为: %llx\n",ctx->opcode);
+        
+    //     fclose(file);
+    // }else{
+    //     printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    // }
     return true;
 }
 
@@ -47,12 +444,30 @@ static bool trans_auipc(DisasContext *ctx, arg_auipc *a)
 
 static bool trans_jal(DisasContext *ctx, arg_jal *a)
 {
+    // printf("我是jal\n");
+
+    // char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     //printf("进入gen_load_tl中");
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //         return;
+    //     }
+    //     fprintf(file,"进入了branch\n");
+    //     fprintf(file,"pc_next: %llx \n",ctx->base.pc_next);
+    //     fprintf(file,"pc_succ_insn: %llx \n",ctx->pc_succ_insn);
+    //     fclose(file);
+    // }else{
+    //     printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    // }
     gen_jal(ctx, a->rd, a->imm);
     return true;
 }
 
 static bool trans_jalr(DisasContext *ctx, arg_jalr *a)
 {
+    // printf("我是jalr\n");
     TCGLabel *misaligned = NULL;
 
     tcg_gen_addi_tl(cpu_pc, get_gpr(ctx, a->rs1, EXT_NONE), a->imm);
@@ -168,7 +583,25 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
     } else {
         tcg_gen_brcond_tl(cond, src1, src2, l);
     }
+
+    // char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
+    //     //printf("进入gen_load_tl中");
+    //     FILE *file = fopen(xwt_path_report_value, "a");
+    //     if (file == NULL) {
+    //         perror("无法打开文件");
+    //         return;
+    //     }
+    //     fprintf(file,"进入了branch\n");
+    //     fprintf(file,"pc_next: %llx \n",ctx->base.pc_next);
+    //     fprintf(file,"pc_succ_insn: %llx \n",ctx->pc_succ_insn);
+    //     fclose(file);
+    // }else{
+    //     printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    // }
+    // printf("branch跳转指令");
     gen_goto_tb(ctx, 1, ctx->pc_succ_insn);
+
 
     gen_set_label(l); /* branch taken */
 
@@ -185,31 +618,38 @@ static bool gen_branch(DisasContext *ctx, arg_b *a, TCGCond cond)
 
 static bool trans_beq(DisasContext *ctx, arg_beq *a)
 {
+    // printf("beq跳转指令\n");
+
     return gen_branch(ctx, a, TCG_COND_EQ);
 }
 
 static bool trans_bne(DisasContext *ctx, arg_bne *a)
 {
+    // printf("bne跳转指令\n");
     return gen_branch(ctx, a, TCG_COND_NE);
 }
 
 static bool trans_blt(DisasContext *ctx, arg_blt *a)
 {
+    // printf("blt跳转指令\n");
     return gen_branch(ctx, a, TCG_COND_LT);
 }
 
 static bool trans_bge(DisasContext *ctx, arg_bge *a)
 {
+    // printf("bge跳转指令\n");
     return gen_branch(ctx, a, TCG_COND_GE);
 }
 
 static bool trans_bltu(DisasContext *ctx, arg_bltu *a)
 {
+    // printf("bltu跳转指令\n");
     return gen_branch(ctx, a, TCG_COND_LTU);
 }
 
 static bool trans_bgeu(DisasContext *ctx, arg_bgeu *a)
 {
+    // printf("bgeu跳转指令\n");
     return gen_branch(ctx, a, TCG_COND_GEU);
 }
 
@@ -223,6 +663,11 @@ static bool gen_load_tl(DisasContext *ctx, arg_lb *a, MemOp memop)
     tcg_gen_qemu_ld_tl(dest, addr, ctx->mem_idx, memop);
     TCGv dest_after = dest;
     gen_set_gpr(ctx, a->rd, dest);
+
+
+
+ 
+
     char *xwt_path_report_value = getenv("xwt_path_report");
     if (xwt_path_report_value != NULL) {
         //printf("进入gen_load_tl中");
@@ -231,7 +676,10 @@ static bool gen_load_tl(DisasContext *ctx, arg_lb *a, MemOp memop)
             perror("无法打开文件");
             return;
         }
-
+        // fprintf(file,"本条为load类指令,gen_load_tl中机器码为: %llx\n",ctx->opcode);
+        print_info_dis_load(ctx,a,addr,file);
+        
+        //print_info_dis(ctx,a,addr);
         //fprintf(file,"到gen_load_tl这一步机器码为 :%x\nload指令源寄存器rs1的编号为: %u\nload指令源寄存器rs1寄存器的值为: %llu\n load指令的目标寄存器编号为: %u\nguest源地址为: %llu\nload出来的值为:%llu\n"
         //            ,ctx->opcode,a->rs1,get_gpr(ctx,a->rs1,EXT_NONE),a->rd,addr,dest_gpr(ctx, a->rd));
 
@@ -241,8 +689,18 @@ static bool gen_load_tl(DisasContext *ctx, arg_lb *a, MemOp memop)
         //fprintf(file,"地址中的值为%llu\n",dest_after);
 
         //fprintf(file,"实际的load地址中的值: %x\n",*(TCGTemp *)tcgv_tl_temp(addr));
-        fprintf(file,"本条为load类指令,机器码为: %llx\n",ctx->opcode);
-        fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
+        //TCGv temp_xwt = tcg_temp_new();
+        //tcg_gen_addi_tl(temp_xwt,2,4);
+        //fprintf(file,"打印temp_xwt%lld\n",temp_xwt);
+
+
+        //fprintf(file,"立即数imm为有符号%lld\n",a->imm);
+        //fprintf(file,"立即数imm为无符号%llu\n",a->imm);
+        //fprintf(file,"rs1其中的值为有符号:%lld\n",dest_gpr(ctx,a->rs1));
+        //fprintf(file,"rs1其中的值为无符号:%llu\n",dest_gpr(ctx,a->rs1));
+        //fprintf(file,"load地址虚拟地址: %llx\n",addr);
+        //fprintf(file,"本条为load类指令,机器码为: %llx\n",ctx->opcode);
+        //fprintf(file,"load的值为: %lld\n",dest_gpr(ctx, a->rd));
         fclose(file);
     }else{
         printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
@@ -276,18 +734,18 @@ static bool gen_load_i128(DisasContext *ctx, arg_lb *a, MemOp memop)
 
     gen_set_gpr128(ctx, a->rd, destl, desth);
 
-    //char *xwt_path_report_value = getenv("xwt_path_report");
-    //if (xwt_path_report_value != NULL) {
+    // char *xwt_path_report_value = getenv("xwt_path_report");
+    // if (xwt_path_report_value != NULL) {
     //   FILE *file = fopen(xwt_path_report_value, "a");
     //    if (file == NULL) {
     //        perror("无法打开文件");
     //        return;
     //    }
-    //    fprintf(file,"128Load的值为%llx%llx\n",desth,destl);
+    //    fprintf(file,"128Load的值为: %llx%llx\n",desth,destl);
     //    fclose(file);
-    //}else{
+    // }else{
     //    printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
-    //}
+    // }
     return true;
 }
 
@@ -364,9 +822,9 @@ static bool gen_store_tl(DisasContext *ctx, arg_sb *a, MemOp memop)
             perror("无法打开文件");
             return;
         }
-
-        fprintf(file,"本条为store类指令,机器码为: %llx\n",ctx->opcode);
-        fprintf(file,"store的值为: %lld\n",data);
+        print_info_dis_store(ctx,a,addr,file);
+        // fprintf(file,"本条为store类指令,机器码为: %llx\n",ctx->opcode);
+        // fprintf(file,"store的值为: %lld\n",data);
         fclose(file);
     }else{
         printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");

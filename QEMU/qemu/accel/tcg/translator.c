@@ -38,7 +38,7 @@ void translator_loop(CPUState *cpu, TranslationBlock *tb, int *max_insns,
     bool plugin_enabled;
 
     //xwt develop
-    *max_insns = 1;
+    // *max_insns = 1;
     // db->singlestep_enabled = 1;
     // printf("xwt max_insn:%d\n",*max_insns);
     /* Initialize DisasContext */

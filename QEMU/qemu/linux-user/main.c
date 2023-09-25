@@ -671,21 +671,94 @@ static int parse_args(int argc, char **argv)
 
 //xwt
 
+void appendString_mains(char **output, const char *newString) {
+    if (*output == NULL) {
+        *output = (char *)malloc(strlen(newString) + 1);
+        if (*output == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        strcpy(*output, newString);
+    } else {
+        size_t oldLength = strlen(*output);
+        size_t newLength = strlen(newString);
+        *output = (char *)realloc(*output, oldLength + newLength + 1);
+        if (*output == NULL) {
+            perror("Memory reallocation failed");
+            exit(1);
+        }
+        strcat(*output, newString);
+    }
+}
+
+
 int main(int argc, char **argv, char **envp)
 {
     //xwt
-     if (argc >= 3) {
-        printf("xwt第二个参数是：%s\n", argv[2]);
+     if (argc >= 2) {
+        // printf("xwt第一个参数是：%s\n", argv[1]);
+        
         const char *varName = "xwt_path_report";
-        const char *varValue = argv[2];
+        const char *varValue = argv[1];
+        
+        const char *csvSuffix = ".csv";
+        size_t newLength = strlen(varValue) + strlen(csvSuffix) + 1;
+        char *newString = (char *)malloc(newLength);
 
+        if (newString == NULL) {
+            printf("Memory allocation failed.\n");
+            return 1;
+        }
+        strcpy(newString, varValue);
+        strcat(newString, csvSuffix);
+        printf("注册的输出路径是：%s\n", newString);
         // 设置环境变量
-        if (setenv(varName, varValue, 1) != 0) {
+        if (setenv(varName, newString, 1) != 0) {
             perror("设置环境变量失败");
             return 1;
         }
+        free(newString);
+        
+
+        char *xwt_path_report_value = getenv("xwt_path_report");
+        if (xwt_path_report_value != NULL) {
+            FILE *file = fopen(xwt_path_report_value, "a");
+            if (file == NULL) {
+                perror("无法打开文件");
+                return;
+            }
+            char *output_csv_str = NULL; 
+            appendString_mains(&output_csv_str,"当前指令的所处的基本块");
+            appendString_mains(&output_csv_str,",");
+            appendString_mains(&output_csv_str,"当前指令的地址");
+            appendString_mains(&output_csv_str,",");
+            appendString_mains(&output_csv_str,"指令所属种类");
+            appendString_mains(&output_csv_str,",");
+            // appendString_mains(&output_csv_str,"指令助记符");
+            // appendString_mains(&output_csv_str,",");
+            // appendString_mains(&output_csv_str,"立即数大小");
+            // appendString_mains(&output_csv_str,",");
+            // appendString_mains(&output_csv_str,"rs1寄存器存储值");
+            // appendString_mains(&output_csv_str,",");
+            // appendString_mains(&output_csv_str,"操作地址值");
+            // appendString_mains(&output_csv_str,",");
+            appendString_mains(&output_csv_str,"load/store的value");
+            // appendString_mains(&output_csv_str,",");
+            fprintf(file,"%s\n",output_csv_str);
+            free(output_csv_str);
+            fclose(file);
+        }else{
+            printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+        }
+
+
+
+
+
+
+
     } else {
-        printf("没有提供第二个参数。\n");
+        printf("没有提供第一个参数。\n");
     }
 
 

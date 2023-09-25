@@ -6,7 +6,8 @@ use File::Temp qw/ tempfile /;
 use Getopt::Long;
 
 # Default to the system objdump if a cross-compiler edition not given.
-my $aobjdump = "objdump";
+# my $aobjdump = "objdump";
+my $aobjdump = "/work/stu/wtxiao/WorkSpace/QEMU_ubuntu_22.04/dockerimages/toolchain/bin/riscv64-unknown-linux-gnu-objdump";
 my $hobjdump = "";
 my $tobjdump = "";
 my $hmachine = "";

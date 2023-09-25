@@ -523,14 +523,97 @@ static inline void gen_op_add_reg_T0(DisasContext *s, MemOp size, int reg)
     gen_op_mov_reg_v(s, size, reg, s->tmp0);
 }
 
+void appendString(char **output, const char *newString) {
+    if (*output == NULL) {
+        *output = (char *)malloc(strlen(newString) + 1);
+        if (*output == NULL) {
+            perror("Memory allocation failed");
+            exit(1);
+        }
+        strcpy(*output, newString);
+    } else {
+        size_t oldLength = strlen(*output);
+        size_t newLength = strlen(newString);
+        *output = (char *)realloc(*output, oldLength + newLength + 1);
+        if (*output == NULL) {
+            perror("Memory reallocation failed");
+            exit(1);
+        }
+        strcat(*output, newString);
+    }
+}
+
+char *lltoa(long long value) {
+    int size = snprintf(NULL, 0, "%lld", value);
+    if (size < 0) {
+
+        return NULL;
+    }
+    char *result = (char *)malloc((size + 1) * sizeof(char));
+    if (result == NULL) return NULL;
+    snprintf(result, size + 1, "%lld", value);
+    return result;
+}
+
+void print_info_dis_load(DisasContext *ctx,TCGv value0,FILE *file){
+    char *output_csv_str = NULL;
+    appendString(&output_csv_str,"load");
+    appendString(&output_csv_str,",");
+
+    char *new_temp = lltoa((long long)value0);
+    appendString(&output_csv_str,new_temp);
+    free(new_temp);
+
+    fprintf(file,"%s\n",output_csv_str);
+    free(output_csv_str);
+}
+
+void print_info_dis_store(DisasContext *ctx,TCGv value0,FILE *file){
+    char *output_csv_str = NULL;
+    appendString(&output_csv_str,"store");
+    appendString(&output_csv_str,",");
+
+    char *new_temp = lltoa((long long)value0);
+    appendString(&output_csv_str,new_temp);
+    free(new_temp);
+
+    fprintf(file,"%s\n",output_csv_str);
+    free(output_csv_str);
+}
+
+/*xwt*/
 static inline void gen_op_ld_v(DisasContext *s, int idx, TCGv t0, TCGv a0)
 {
     tcg_gen_qemu_ld_tl(t0, a0, s->mem_index, idx | MO_LE);
+    char *xwt_path_report_value = getenv("xwt_path_report");
+    if (xwt_path_report_value != NULL) {
+        FILE *file = fopen(xwt_path_report_value, "a");
+        if (file == NULL) {
+            perror("无法打开文件");
+            return;
+        }
+        print_info_dis_load(s,t0,file);
+        fclose(file);
+    }else{        
+        printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    }
 }
 
 static inline void gen_op_st_v(DisasContext *s, int idx, TCGv t0, TCGv a0)
 {
     tcg_gen_qemu_st_tl(t0, a0, s->mem_index, idx | MO_LE);
+    char *xwt_path_report_value = getenv("xwt_path_report");
+    if (xwt_path_report_value != NULL) {
+        FILE *file = fopen(xwt_path_report_value, "a");
+        if (file == NULL) {
+            perror("无法打开文件");
+            return;
+        }
+        print_info_dis_store(s,t0,file);
+        fclose(file);
+    }else{        
+        printf("gen_load_tl中环境变量 xwt_path_report 不存在\n");
+    }
 }
 
 static inline void gen_op_st_rm_T0_A0(DisasContext *s, int idx, int d)
@@ -622,6 +705,8 @@ static TCGv eip_cur_tl(DisasContext *s)
     }
 }
 
+
+// xwt
 /* Compute SEG:REG into A0.  SEG is selected from the override segment
    (OVR_SEG) and the default segment (DEF_SEG).  OVR_SEG may be -1 to
    indicate no override.  */
@@ -819,6 +904,8 @@ static bool gen_check_io(DisasContext *s, MemOp ot, TCGv_i32 port,
 #endif
 }
 
+
+//xwt
 static void gen_movs(DisasContext *s, MemOp ot)
 {
     gen_string_movl_A0_ESI(s);
@@ -7004,7 +7091,7 @@ static void i386_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
         return;
     }
 #endif
-
+    // xwt
     if (disas_insn(dc, cpu)) {
         target_ulong pc_next = dc->pc;
         dc->base.pc_next = pc_next;
