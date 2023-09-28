@@ -1,11 +1,13 @@
 # RV-QEMU
-RISC-V QEMU Port
 
-now you can use something like:
-```
-    qemu-riscv64 \
-        /work/stu/wtxiao/WorkSpace/QEMU/dockerimages/hello_riscv64 \
-        /work/stu/wtxiao/WorkSpace/QEMU/dockerimages/logs/hello_exe.txt
+本项目是基于QEMU的RISC-V动态二进制转译和平台移植项目的仓库，仓库的目录结构如下：
 
+```c
+.
+|-- QEMU
+|-- README.md
+|-- SPEC
+`-- tools
 ```
-to see the instruction addr and machine code for guest.
+
+每一个目录代表了每一阶段工作的一部分，如若要查阅文档或使用最终的工具，可以进入到对应文件夹下查看对应的文档，每一个部分都有对应的文档。
