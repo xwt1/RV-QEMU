@@ -1590,18 +1590,18 @@ static void riscv_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
             // fprintf(file, "当前为%d条guest指令\n", global_host_addr_xwt_num);
 
 
-            fprintf(file, "%d条guest指令地址: %llx\n",global_host_addr_xwt_num,
-                    global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
+            // fprintf(file, "%d条guest指令地址: %llx\n",global_host_addr_xwt_num,
+            //         global_host_addr_xwt->mci->insn_addr_arr[global_host_addr_xwt_num -1]);
 
-            if(xwt_insn_is_16bit){
-                uint16_t now_insn_machine_code = ctx->opcode;
-                fprintf(file, "当前指令为compress压缩后的指令,占用两个字节\n");
-                fprintf(file, "机器码为%llx\n",ctx->opcode);
-            }else{
-                uint32_t now_insn_machine_code = ctx->opcode;
-                fprintf(file, "当前指令没有经过compress压缩,占用四个字节\n");
-                fprintf(file, "机器码为%llx\n",ctx->opcode);
-            }
+            // if(xwt_insn_is_16bit){
+            //     uint16_t now_insn_machine_code = ctx->opcode;
+            //     fprintf(file, "当前指令为compress压缩后的指令,占用两个字节\n");
+            //     fprintf(file, "机器码为%llx\n",ctx->opcode);
+            // }else{
+            //     uint32_t now_insn_machine_code = ctx->opcode;
+            //     fprintf(file, "当前指令没有经过compress压缩,占用四个字节\n");
+            //     fprintf(file, "机器码为%llx\n",ctx->opcode);
+            // }
 
             // fprintf(file, "第15个通用寄存器的值为: %llu\n",xwt_reg15);
             // fprintf(file, "第20个通用寄存器指向的内存地址值为: %llu\n",mem_access_xwt);
